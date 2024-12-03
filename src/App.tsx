@@ -6,25 +6,35 @@ import { useAuthenticator } from "@aws-amplify/ui-react";
 const client = generateClient<Schema>();
 
 function App() {
-  const { signOut } = useAuthenticator();
+  const { user, signOut } = useAuthenticator(); // Lấy signOut một lần
   const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
 
   useEffect(() => {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
+    // Sử dụng observeQuery để theo dõi các thay đổi
+    const subscription = client.models.Todo.observeQuery().subscribe({
+      next: (data) => setTodos(data.items), // Cập nhật trạng thái todos khi có sự thay đổi
     });
+
+    // Dọn dẹp subscription khi component unmount
+    return () => subscription.unsubscribe();
   }, []);
 
   function createTodo() {
-    client.models.Todo.create({ content: window.prompt("Todo content") });
+    const content = window.prompt("Todo content");
+    if (content) {
+      // Gọi API tạo todo mới nếu có nội dung
+      client.models.Todo.create({ content });
+    }
   }
 
   function deleteTodo(id: string) {
+    // Gọi API xoá todo
     client.models.Todo.delete({ id });
   }
 
   return (
     <main>
+      <h1>{user?.signInDetails?.loginId}'s todos</h1>
       <h1>My Belu Do</h1>
       <button onClick={createTodo}>+ new</button>
       <ul>
